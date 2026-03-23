@@ -117,6 +117,15 @@ socket.on("update", (data) => {
   triggerStrongBlink();
   resetInactivityBlinkTimer();
 });
+function resetInactivityBlinkTimer(){
+  clearInterval(inactivityTimer);
+
+  inactivityTimer = setInterval(() => {
+    if(students.length > 0){
+      triggerStrongBlink();
+    }
+  }, 60000);
+}
 
 function triggerStrongBlink(){
   const callBox = document.getElementById("call");
