@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Study Room Student</title>
+<script src="/socket.io/socket.io.js"></script>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  text-align:center;
+  margin:0;
+  padding:40px 20px;
+  background:#121212;
+  color:#f0f0f0;
+}
+
+h1{
+  margin:0 0 30px 0;
+  font-size:40px;
+}
+
+.callBox{
+  margin:20px auto 40px;
+  padding:20px 36px;
+  background:#a74040;
+  color:white;
+  font-size:90px;
+  font-weight:bold;
+  border-radius:14px;
+  display:inline-block;
+}
+
+.queueWrap{
+  max-width:1200px;
+  margin:0 auto;
+}
+
+.queueTitle{
+  font-size:50px;
+  font-weight:bold;
+  margin-bottom:14px;
+}
+
+.queueTable{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  background:#1b1b1b;
+}
+
+.queueTable th,
+.queueTable td{
+  border:2px solid #666;
+  padding:18px 10px;
+  text-align:center;
+}
+
+.queueTable th{
+  font-size:50px;
+  font-weight:bold;
+  color:#ffffff;
+  background:#202020;
+}
+
+.queueTable td{
+  font-size:50px;
+  font-weight:bold;
+  color:#ffffff;
+  background:#181818;
+}
+
+.blinkStrong{
+  animation: strongBlink 1s linear 3;
+}
+
+@keyframes strongBlink{
+  0%{ opacity:1; transform:scale(1); }
+  50%{ opacity:0.15; transform:scale(1.03); }
+  100%{ opacity:1; transform:scale(1); }
+}
+</style>
+</head>
+<body>
+
+<h1>Study Room</h1>
+
+<div id="call" class="callBox"></div>
+
+<div class="queueWrap">
+  <div class="queueTitle">다음 순서</div>
+
+  <table class="queueTable">
+    <thead>
+      <tr id="queueNumbers"></tr>
+    </thead>
+    <tbody>
+      <tr id="queueNames"></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+const socket = io();
+
+let students = [];
+let currentIndex = 0;
+
+let inactivityTimer = null;
+let blinkEndTimer = null;
+
+socket.on("update", (data) => {
+  students = data.students || [];
+  currentIndex = data.currentIndex || 0;
+
+  render();
+  triggerStrongBlink();
+  resetInactivityBlinkTimer();
+});
+
+function triggerStrongBlink(){
+  const callBox = document.getElementById("call");
+  if(!callBox || students.length === 0) return;
+
+  callBox.classList.remove("blinkStrong");
+  void callBox.offsetWidth;
+  callBox.classList.add("blinkStrong");
+
+  clearTimeout(blinkEndTimer);
+  blinkEndTimer = setTimeout(() => {
+    callBox.classList.remove("blinkStrong");
+  }, 3000);
+}
+
+
+function render(){
+  const call = document.getElementById("call");
+  const queueNumbers = document.getElementById("queueNumbers");
+  const queueNames = document.getElementById("queueNames");
+
+  queueNumbers.innerHTML = "";
+  queueNames.innerHTML = "";
+
+  if(students.length === 0){
+    call.textContent = "";
+    return;
+  }
+
+  call.textContent = students[currentIndex] + " 학생 강의실로 들어오세요";
+
+  // 다음 순서 5명 표시
+  const maxQueue = Math.min(5, students.length - 1);
+
+  for(let i = 1; i <= maxQueue; i++){
+    const nextIndex = (currentIndex + i) % students.length;
+
+    const th = document.createElement("th");
+    th.textContent = i;
+
+    const td = document.createElement("td");
+    td.textContent = students[nextIndex];
+
+    queueNumbers.appendChild(th);
+    queueNames.appendChild(td);
+  }
+}
+
+resetInactivityBlinkTimer();
+</script>
+
+</body>
+</html>

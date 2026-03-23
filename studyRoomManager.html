@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Study Room Manager</title>
+
+<style>
+
+body{
+  font-family: Arial;
+  text-align:center;
+  margin-top:40px;
+}
+
+input{
+  padding:8px;
+  width:320px;
+}
+
+button{
+  padding:8px 14px;
+  margin:5px;
+  cursor:pointer;
+}
+
+.circle{
+  position:relative;
+  width:500px;
+  height:500px;
+  margin:40px auto;
+  border:2px dashed #ccc;
+  border-radius:50%;
+}
+
+.student{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:#eee;
+  cursor:pointer;
+  text-align:center;
+}
+
+.student:hover{
+  background:#ddd;
+}
+
+.active{
+  background:#ff6b6b;
+  color:white;
+  font-weight:bold;
+}
+
+.deleteBtn{
+  position:absolute;
+  top:-5px;
+  right:-5px;
+  background:#444;
+  color:white;
+  border-radius:50%;
+  width:18px;
+  height:18px;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.info{
+  color:#777;
+  font-size:13px;
+}
+.callBox{
+  margin-top:15px;
+  padding:15px 30px;
+  background:#ff4d4d;
+  color:white;
+  font-size:20px;
+  font-weight:bold;
+  border-radius:6px;
+  display:inline-block;
+}
+
+.blinkStrong{
+  animation: strongBlink 0.5s linear 6;
+}
+
+@keyframes strongBlink{
+  0%{opacity:1;}
+  50%{opacity:0.1;}
+  100%{opacity:1;}
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Study Room Manager</h1>
+
+<input id="nameInput" placeholder="학생 이름 (쉼표로 구분)">
+<button onclick="addStudents()">추가</button>
+
+<br>
+
+<button onclick="prevStudent()">이전</button>
+<button onclick="nextStudent()">다음</button>
+<button onclick="randomStart()">랜덤 시작</button>
+
+<div class="info">※ X 버튼을 누르면 학생이 삭제됩니다</div>
+
+<div id="currentStudent" class="callBox"></div>
+<div class="circle" id="circle"></div>
+
+<script>
+
+let students=[]
+let currentIndex=0
+let blinkTimer
+
+function addStudents(){
+
+  const input=document.getElementById("nameInput").value
+  if(!input) return
+
+  const names=input.split(",")
+
+  students = names
+    .map(name => name.trim())
+    .filter(name => name !== "")
+
+  currentIndex=0
+
+  document.getElementById("nameInput").value=""
+
+  render()
+}
+
+function deleteStudent(index){
+
+  students.splice(index,1)
+
+  if(currentIndex>=students.length){
+    currentIndex=students.length-1
+  }
+
+  if(currentIndex<0) currentIndex=0
+
+  render()
+}
+
+function nextStudent(){
+
+  if(students.length===0) return
+
+  currentIndex=(currentIndex+1)%students.length
+
+  render()
+
+  triggerBlink()
+
+  resetBlinkTimer()
+
+}
+
+function prevStudent(){
+
+  if(students.length===0) return
+
+  currentIndex=(currentIndex-1+students.length)%students.length
+
+  render()
+
+  triggerBlink()
+
+  resetBlinkTimer()
+
+}
+
+function randomStart(){
+
+  if(students.length===0) return
+
+  currentIndex=Math.floor(Math.random()*students.length)
+
+  render()
+
+  triggerBlink()
+
+  resetBlinkTimer()
+
+}
+
+function getStudentSize(count){
+
+  if(count<=10) return 70
+  if(count<=20) return 55
+  if(count<=30) return 45
+  if(count<=40) return 38
+  return 32
+}
+
+function getRadius(count){
+
+  if(count<=10) return 200
+  if(count<=20) return 180
+  if(count<=30) return 160
+  if(count<=40) return 150
+  return 140
+}
+
+function render(){
+
+  const circle=document.getElementById("circle")
+  circle.innerHTML=""
+
+  if(students.length===0) return
+
+  const center=250
+  const radius=getRadius(students.length)
+  const size=getStudentSize(students.length)
+
+  const angleStep=2*Math.PI/students.length
+
+  students.forEach((name,i)=>{
+
+    const angle=i*angleStep
+
+    const x=center+radius*Math.cos(angle)
+    const y=center+radius*Math.sin(angle)
+
+    const div=document.createElement("div")
+
+    div.className="student"
+
+    if(i===currentIndex) div.classList.add("active")
+
+    div.style.left=x+"px"
+    div.style.top=y+"px"
+
+    div.style.width=size+"px"
+    div.style.height=size+"px"
+    div.style.fontSize=(size/4)+"px"
+
+    div.innerText=name
+
+    const del=document.createElement("div")
+    del.className="deleteBtn"
+    del.innerText="X"
+    del.onclick=(e)=>{
+      e.stopPropagation()
+      deleteStudent(i)
+    }
+
+    div.appendChild(del)
+
+    circle.appendChild(div)
+
+  })
+  const currentDiv = document.getElementById("currentStudent")
+
+    if(students.length>0){
+    currentDiv.innerText = students[currentIndex] + " 학생 강의실로 들어오세요"
+    }else{
+    currentDiv.innerText = ""
+    }
+    resetBlinkTimer()
+}
+function triggerBlink(){
+
+  const box = document.getElementById("currentStudent")
+
+  box.classList.remove("blinkStrong")
+
+  void box.offsetWidth
+
+  box.classList.add("blinkStrong")
+
+}
+function resetBlinkTimer(){
+
+  clearInterval(blinkTimer)
+
+  blinkTimer = setInterval(()=>{
+
+    triggerBlink()
+
+  },60000)
+
+}
+</script>
+
+</body>
+</html>

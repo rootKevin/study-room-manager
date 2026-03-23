@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Study Room Manager Admin</title>
+<script src="/socket.io/socket.io.js"></script>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  text-align:center;
+  margin:20px 0;
+}
+
+h1{
+  margin-bottom:16px;
+}
+
+.top-controls{
+  margin-bottom:14px;
+}
+
+input{
+  padding:8px;
+  width:360px;
+}
+
+button{
+  padding:8px 14px;
+  margin:4px;
+  cursor:pointer;
+}
+
+.circle{
+  position:relative;
+  width:520px;
+  height:520px;
+  margin:20px auto 14px;
+  border:2px dashed #ccc;
+  border-radius:50%;
+}
+
+.student{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  padding:8px 12px;
+  background:#eee;
+  border-radius:20px;
+  cursor:pointer;
+  user-select:none;
+  white-space:nowrap;
+  font-size:14px;
+}
+
+.active{
+  background:#ff5a5a;
+  color:white;
+  font-weight:bold;
+}
+
+.callBox{
+  margin:12px auto 8px;
+  padding:12px 24px;
+  background:#ff0000;
+  color:white;
+  font-size:28px;
+  font-weight:bold;
+  border-radius:8px;
+  display:inline-block;
+}
+
+.preview{
+  font-size:24px;
+  color:#1565ff;
+  font-weight:bold;
+}
+
+.blinkStrong{
+  animation: strongBlink 0.5s linear 6;
+}
+
+@keyframes strongBlink{
+  0%{opacity:1;}
+  50%{opacity:0.15;}
+  100%{opacity:1;}
+}
+</style>
+</head>
+<body>
+
+<h1>Study Room Manager (Admin)</h1>
+
+<div class="top-controls">
+  <input id="names" placeholder="학생 이름 , 로 구분">
+  <button onclick="addStudents()">추가</button>
+</div>
+
+<div class="top-controls">
+  <button onclick="prev()">이전</button>
+  <button onclick="next()">다음</button>
+  <button onclick="randomStart()">랜덤시작</button>
+</div>
+
+<div id="students" class="circle"></div>
+
+<div id="call" class="callBox"></div>
+<div id="preview" class="preview"></div>
+
+<script>
+const socket = io();
+
+let students = [];
+let currentIndex = 0;
+
+let inactivityTimer = null;
+let blinkEndTimer = null;
+
+socket.on("update", (data) => {
+  students = data.students || [];
+  currentIndex = data.currentIndex || 0;
+  render();
+});
+
+function addStudents(){
+  const input = document.getElementById("names").value.trim();
+  if(!input) return;
+
+  const list = input
+    .split(",")
+    .map(v => v.trim())
+    .filter(v => v !== "");
+
+  socket.emit("addStudents", list);
+  document.getElementById("names").value = "";
+
+  onUserAction(false);
+}
+
+function next(){
+  if(students.length === 0) return;
+  socket.emit("next");
+  onUserAction(true);
+}
+
+function prev(){
+  if(students.length === 0) return;
+  socket.emit("prev");
+  onUserAction(true);
+}
+
+function randomStart(){
+  if(students.length === 0) return;
+  socket.emit("random");
+  onUserAction(false);
+}
+
+function deleteStudent(index){
+  socket.emit("deleteStudent", index);
+  onUserAction(false);
+}
+
+function onUserAction(shouldBlinkNow){
+  resetInactivityBlinkTimer();
+
+  if(shouldBlinkNow){
+    triggerStrongBlink();
+  }
+}
+
+function triggerStrongBlink(){
+  const callBox = document.getElementById("call");
+  if(!callBox) return;
+
+  callBox.classList.remove("blinkStrong");
+  void callBox.offsetWidth;
+  callBox.classList.add("blinkStrong");
+
+  clearTimeout(blinkEndTimer);
+  blinkEndTimer = setTimeout(() => {
+    callBox.classList.remove("blinkStrong");
+  }, 3000);
+}
+
+function resetInactivityBlinkTimer(){
+  clearInterval(inactivityTimer);
+
+  inactivityTimer = setInterval(() => {
+    if(students.length > 0){
+      triggerStrongBlink();
+    }
+  }, 600000);
+}
+
+function getRadius(count){
+  if(count <= 10) return 200;
+  if(count <= 20) return 185;
+  if(count <= 30) return 170;
+  if(count <= 40) return 160;
+  return 150;
+}
+
+function getFontSize(count){
+  if(count <= 10) return 18;
+  if(count <= 20) return 16;
+  if(count <= 30) return 14;
+  if(count <= 40) return 13;
+  return 12;
+}
+
+function render(){
+  const box = document.getElementById("students");
+  box.innerHTML = "";
+
+  if(students.length > 0){
+    const center = 260;
+    const radius = getRadius(students.length);
+    const angleStep = (2 * Math.PI) / students.length;
+    const fontSize = getFontSize(students.length);
+
+    students.forEach((name, i) => {
+      const angle = i * angleStep - Math.PI / 2;
+      const x = center + radius * Math.cos(angle);
+      const y = center + radius * Math.sin(angle);
+
+      const div = document.createElement("div");
+      div.className = "student";
+      if(i === currentIndex) div.classList.add("active");
+
+      div.style.left = x + "px";
+      div.style.top = y + "px";
+      div.style.fontSize = fontSize + "px";
+      div.textContent = name;
+      div.onclick = () => deleteStudent(i);
+
+      box.appendChild(div);
+    });
+  }
+
+  const call = document.getElementById("call");
+  const preview = document.getElementById("preview");
+
+  if(students.length > 0){
+    call.textContent = students[currentIndex] + " 학생 강의실로 들어오세요";
+
+    if(students.length > 1){
+      const nextIndex = (currentIndex + 1) % students.length;
+      preview.textContent = "다음 학생 : " + students[nextIndex];
+    }else{
+      preview.textContent = "다음 학생 : -";
+    }
+  }else{
+    call.textContent = "";
+    preview.textContent = "다음 학생 : -";
+  }
+}
+
+resetInactivityBlinkTimer();
+</script>
+
+</body>
+</html>
