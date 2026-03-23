@@ -43,9 +43,15 @@ io.on("connection", (socket) => {
     broadcast();
   });
 
-  socket.on("random", () => {
+  socket.on("shuffle", () => {
     if (students.length === 0) return;
-    currentIndex = Math.floor(Math.random() * students.length);
+
+    for (let i = students.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [students[i], students[j]] = [students[j], students[i]];
+    }
+
+    currentIndex = 0;
     broadcast();
   });
 

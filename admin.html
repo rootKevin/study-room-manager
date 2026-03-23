@@ -98,8 +98,7 @@ button{
 <div class="top-controls">
   <button onclick="prev()">이전</button>
   <button onclick="next()">다음</button>
-  <button onclick="randomStart()">랜덤시작</button>
-</div>
+  <button onclick="shuffleStudents()">이름섞기</button></div>
 
 <div id="students" class="circle"></div>
 
@@ -148,10 +147,9 @@ function prev(){
   onUserAction(true);
 }
 
-function randomStart(){
+function shuffleStudents(){
   if(students.length === 0) return;
-  socket.emit("random");
-  onUserAction(false);
+  socket.emit("shuffle");
 }
 
 function deleteStudent(index){
