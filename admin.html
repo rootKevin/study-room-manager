@@ -10,10 +10,12 @@ body{
   font-family: Arial, sans-serif;
   text-align:center;
   margin:20px 0;
+  background:#f4f4f4;
 }
 
 h1{
   margin-bottom:16px;
+  font-size:58px;
 }
 
 .top-controls{
@@ -21,14 +23,16 @@ h1{
 }
 
 input{
-  padding:8px;
-  width:360px;
+  padding:10px;
+  width:420px;
+  font-size:20px;
 }
 
 button{
-  padding:8px 14px;
+  padding:10px 16px;
   margin:4px;
   cursor:pointer;
+  font-size:18px;
 }
 
 .circle{
@@ -98,7 +102,9 @@ button{
 <div class="top-controls">
   <button onclick="prev()">이전</button>
   <button onclick="next()">다음</button>
-  <button onclick="shuffleStudents()">이름섞기</button></div>
+  <button onclick="shuffleStudents()">이름섞기</button>
+  <button onclick="clearSelection()">선택해제</button>
+</div>
 
 <div id="students" class="circle"></div>
 
@@ -109,14 +115,14 @@ button{
 const socket = io();
 
 let students = [];
-let currentIndex = 0;
+let currentIndex = null;
 
 let inactivityTimer = null;
 let blinkEndTimer = null;
 
 socket.on("update", (data) => {
   students = data.students || [];
-  currentIndex = data.currentIndex || 0;
+  currentIndex = data.currentIndex ?? null;
   render();
 });
 
@@ -150,6 +156,12 @@ function prev(){
 function shuffleStudents(){
   if(students.length === 0) return;
   socket.emit("shuffle");
+  onUserAction(false);
+}
+
+function clearSelection(){
+  socket.emit("clearSelection");
+  onUserAction(false);
 }
 
 function deleteStudent(index){
@@ -167,15 +179,22 @@ function onUserAction(shouldBlinkNow){
 
 function triggerStrongBlink(){
   const callBox = document.getElementById("call");
-  if(!callBox) return;
+  const preview = document.getElementById("preview");
+
+  if(!callBox || currentIndex === null) return;
 
   callBox.classList.remove("blinkStrong");
+  preview.classList.remove("blinkStrong");
+
   void callBox.offsetWidth;
+
   callBox.classList.add("blinkStrong");
+  preview.classList.add("blinkStrong");
 
   clearTimeout(blinkEndTimer);
   blinkEndTimer = setTimeout(() => {
     callBox.classList.remove("blinkStrong");
+    preview.classList.remove("blinkStrong");
   }, 3000);
 }
 
@@ -183,10 +202,10 @@ function resetInactivityBlinkTimer(){
   clearInterval(inactivityTimer);
 
   inactivityTimer = setInterval(() => {
-    if(students.length > 0){
+    if(students.length > 0 && currentIndex !== null){
       triggerStrongBlink();
     }
-  }, 600000);
+  }, 60000);
 }
 
 function getRadius(count){
@@ -238,13 +257,18 @@ function render(){
   const preview = document.getElementById("preview");
 
   if(students.length > 0){
-    call.textContent = students[currentIndex] + " 학생 강의실로 들어오세요";
-
-    if(students.length > 1){
-      const nextIndex = (currentIndex + 1) % students.length;
-      preview.textContent = "다음 학생 : " + students[nextIndex];
-    }else{
+    if(currentIndex === null){
+      call.textContent = "아무도 선택되지 않았습니다";
       preview.textContent = "다음 학생 : -";
+    } else {
+      call.textContent = students[currentIndex] + " 학생 강의실로 들어오세요";
+
+      if(students.length > 1){
+        const nextIndex = (currentIndex + 1) % students.length;
+        preview.textContent = "다음 학생 : " + students[nextIndex];
+      } else {
+        preview.textContent = "다음 학생 : -";
+      }
     }
   }else{
     call.textContent = "";

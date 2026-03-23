@@ -104,32 +104,23 @@ h1{
 const socket = io();
 
 let students = [];
-let currentIndex = 0;
+let currentIndex = null;
 
 let inactivityTimer = null;
 let blinkEndTimer = null;
 
 socket.on("update", (data) => {
   students = data.students || [];
-  currentIndex = data.currentIndex || 0;
+  currentIndex = data.currentIndex ?? null;
 
   render();
   triggerStrongBlink();
   resetInactivityBlinkTimer();
 });
-function resetInactivityBlinkTimer(){
-  clearInterval(inactivityTimer);
-
-  inactivityTimer = setInterval(() => {
-    if(students.length > 0){
-      triggerStrongBlink();
-    }
-  }, 60000);
-}
 
 function triggerStrongBlink(){
   const callBox = document.getElementById("call");
-  if(!callBox || students.length === 0) return;
+  if(!callBox || students.length === 0 || currentIndex === null) return;
 
   callBox.classList.remove("blinkStrong");
   void callBox.offsetWidth;
@@ -141,6 +132,15 @@ function triggerStrongBlink(){
   }, 3000);
 }
 
+function resetInactivityBlinkTimer(){
+  clearInterval(inactivityTimer);
+
+  inactivityTimer = setInterval(() => {
+    if(students.length > 0 && currentIndex !== null){
+      triggerStrongBlink();
+    }
+  }, 60000);
+}
 
 function render(){
   const call = document.getElementById("call");
@@ -155,9 +155,13 @@ function render(){
     return;
   }
 
+  if(currentIndex === null){
+    call.textContent = "아무도 선택되지 않았습니다";
+    return;
+  }
+
   call.textContent = students[currentIndex] + " 학생 강의실로 들어오세요";
 
-  // 다음 순서 5명 표시
   const maxQueue = Math.min(5, students.length - 1);
 
   for(let i = 1; i <= maxQueue; i++){

@@ -13,7 +13,7 @@ app.get("/", (req, res) => {
 });
 
 let students = [];
-let currentIndex = 0;
+let currentIndex = null;
 
 function broadcast() {
   io.emit("update", {
@@ -27,19 +27,31 @@ io.on("connection", (socket) => {
 
   socket.on("addStudents", (list) => {
     students = list;
-    currentIndex = 0;
+    currentIndex = null;
     broadcast();
   });
 
   socket.on("next", () => {
     if (students.length === 0) return;
-    currentIndex = (currentIndex + 1) % students.length;
+
+    if (currentIndex === null) {
+      currentIndex = 0;
+    } else {
+      currentIndex = (currentIndex + 1) % students.length;
+    }
+
     broadcast();
   });
 
   socket.on("prev", () => {
     if (students.length === 0) return;
-    currentIndex = (currentIndex - 1 + students.length) % students.length;
+
+    if (currentIndex === null) {
+      currentIndex = students.length - 1;
+    } else {
+      currentIndex = (currentIndex - 1 + students.length) % students.length;
+    }
+
     broadcast();
   });
 
@@ -51,19 +63,26 @@ io.on("connection", (socket) => {
       [students[i], students[j]] = [students[j], students[i]];
     }
 
-    currentIndex = 0;
+    currentIndex = null;
+    broadcast();
+  });
+
+  socket.on("clearSelection", () => {
+    currentIndex = null;
     broadcast();
   });
 
   socket.on("deleteStudent", (index) => {
     students.splice(index, 1);
 
-    if (currentIndex >= students.length) {
+    if (students.length === 0) {
+      currentIndex = null;
+    } else if (currentIndex === index) {
+      currentIndex = null;
+    } else if (currentIndex !== null && currentIndex > index) {
+      currentIndex -= 1;
+    } else if (currentIndex !== null && currentIndex >= students.length) {
       currentIndex = students.length - 1;
-    }
-
-    if (currentIndex < 0) {
-      currentIndex = 0;
     }
 
     broadcast();
