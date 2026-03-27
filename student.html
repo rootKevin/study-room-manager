@@ -28,7 +28,7 @@ h1{
   font-size:90px;
   font-weight:bold;
   border-radius:14px;
-  display:inline-block;
+  display:none;
 }
 
 .queueWrap{
@@ -79,6 +79,7 @@ h1{
   50%{ opacity:0.15; transform:scale(1.03); }
   100%{ opacity:1; transform:scale(1); }
 }
+
 #blackout{
   position:fixed;
   top:0;
@@ -89,17 +90,28 @@ h1{
   z-index:9999;
   display:none;
 }
+
 .broadcastBox{
   display:none;
   margin:40px auto;
-  padding:30px 40px;
-  background:#000000;
+  padding:40px 50px;
+  background:#0b3d0b;
   color:#ffffff;
   font-size:80px;
   font-weight:bold;
   border-radius:16px;
   max-width:1400px;
   line-height:1.4;
+}
+
+.broadcastBlink{
+  animation: broadcastBlinkAnim 0.6s linear 2;
+}
+
+@keyframes broadcastBlinkAnim{
+  0%{opacity:1;}
+  50%{opacity:0.1;}
+  100%{opacity:1;}
 }
 </style>
 </head>
@@ -112,7 +124,6 @@ h1{
 
 <div class="queueWrap">
   <div class="queueTitle">다음 순서</div>
-
   <table class="queueTable">
     <thead>
       <tr id="queueNumbers"></tr>
@@ -122,13 +133,16 @@ h1{
     </tbody>
   </table>
 </div>
+
 <div id="blackout"></div>
+
 <script>
 const socket = io();
 
 let students = [];
 let currentIndex = null;
 let broadcastMessage = "";
+let lastBroadcastMessage = "";
 
 let inactivityTimer = null;
 let blinkEndTimer = null;
@@ -144,6 +158,7 @@ socket.on("update", (data) => {
   render();
   triggerStrongBlink();
   resetInactivityBlinkTimer();
+
   lastActivityTime = Date.now();
   hideBlackout();
 });
@@ -151,7 +166,7 @@ socket.on("update", (data) => {
 function checkBlackout(){
   const now = Date.now();
 
-  if(now - lastActivityTime >= 180000){ // 3분
+  if(now - lastActivityTime >= 180000){
     showBlackout();
   }
 }
@@ -166,6 +181,7 @@ function hideBlackout(){
 
 function triggerStrongBlink(){
   const callBox = document.getElementById("call");
+
   if(!callBox || students.length === 0 || currentIndex === null || broadcastMessage) return;
 
   callBox.classList.remove("blinkStrong");
@@ -182,7 +198,7 @@ function resetInactivityBlinkTimer(){
   clearInterval(inactivityTimer);
 
   inactivityTimer = setInterval(() => {
-    if(students.length > 0 && currentIndex !== null){
+    if(students.length > 0 && currentIndex !== null && !broadcastMessage){
       triggerStrongBlink();
     }
   }, 60000);
@@ -204,9 +220,19 @@ function render(){
 
     call.style.display = "none";
     queueWrap.style.display = "none";
+
+    if(broadcastMessage !== lastBroadcastMessage){
+      broadcastBox.classList.remove("broadcastBlink");
+      void broadcastBox.offsetWidth;
+      broadcastBox.classList.add("broadcastBlink");
+      lastBroadcastMessage = broadcastMessage;
+    }
+
     return;
   } else {
     broadcastBox.style.display = "none";
+    broadcastBox.classList.remove("broadcastBlink");
+    lastBroadcastMessage = "";
   }
 
   queueWrap.style.display = "block";
