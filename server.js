@@ -14,16 +14,18 @@ app.get("/", (req, res) => {
 
 let students = [];
 let currentIndex = null;
+let broadcastMessage = "";
 
 function broadcast() {
   io.emit("update", {
     students,
-    currentIndex
+    currentIndex,
+    broadcastMessage
   });
 }
 
 io.on("connection", (socket) => {
-  socket.emit("update", { students, currentIndex });
+  socket.emit("update", { students, currentIndex, broadcastMessage });
 
   socket.on("addStudents", (list) => {
     students = list;
@@ -85,6 +87,22 @@ io.on("connection", (socket) => {
       currentIndex = students.length - 1;
     }
 
+    broadcast();
+  });
+
+  socket.on("clearAllStudents", () => {
+    students = [];
+    currentIndex = null;
+    broadcast();
+  });
+
+  socket.on("setBroadcastMessage", (message) => {
+    broadcastMessage = (message || "").trim();
+    broadcast();
+  });
+
+  socket.on("clearBroadcastMessage", () => {
+    broadcastMessage = "";
     broadcast();
   });
 });

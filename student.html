@@ -89,12 +89,25 @@ h1{
   z-index:9999;
   display:none;
 }
+.broadcastBox{
+  display:none;
+  margin:40px auto;
+  padding:30px 40px;
+  background:#000000;
+  color:#ffffff;
+  font-size:80px;
+  font-weight:bold;
+  border-radius:16px;
+  max-width:1400px;
+  line-height:1.4;
+}
 </style>
 </head>
 <body>
 
 <h1>Study Room</h1>
 
+<div id="broadcastBox" class="broadcastBox"></div>
 <div id="call" class="callBox"></div>
 
 <div class="queueWrap">
@@ -115,6 +128,7 @@ const socket = io();
 
 let students = [];
 let currentIndex = null;
+let broadcastMessage = "";
 
 let inactivityTimer = null;
 let blinkEndTimer = null;
@@ -123,14 +137,15 @@ let lastActivityTime = Date.now();
 let blackoutTimer = null;
 
 socket.on("update", (data) => {
-  lastActivityTime = Date.now();
-  hideBlackout();
   students = data.students || [];
   currentIndex = data.currentIndex ?? null;
+  broadcastMessage = data.broadcastMessage || "";
 
   render();
   triggerStrongBlink();
   resetInactivityBlinkTimer();
+  lastActivityTime = Date.now();
+  hideBlackout();
 });
 
 function checkBlackout(){
@@ -151,7 +166,7 @@ function hideBlackout(){
 
 function triggerStrongBlink(){
   const callBox = document.getElementById("call");
-  if(!callBox || students.length === 0 || currentIndex === null) return;
+  if(!callBox || students.length === 0 || currentIndex === null || broadcastMessage) return;
 
   callBox.classList.remove("blinkStrong");
   void callBox.offsetWidth;
@@ -175,11 +190,26 @@ function resetInactivityBlinkTimer(){
 
 function render(){
   const call = document.getElementById("call");
+  const queueWrap = document.querySelector(".queueWrap");
   const queueNumbers = document.getElementById("queueNumbers");
   const queueNames = document.getElementById("queueNames");
+  const broadcastBox = document.getElementById("broadcastBox");
 
   queueNumbers.innerHTML = "";
   queueNames.innerHTML = "";
+
+  if(broadcastMessage){
+    broadcastBox.style.display = "block";
+    broadcastBox.textContent = broadcastMessage;
+
+    call.style.display = "none";
+    queueWrap.style.display = "none";
+    return;
+  } else {
+    broadcastBox.style.display = "none";
+  }
+
+  queueWrap.style.display = "block";
 
   if(students.length === 0){
     call.textContent = "";

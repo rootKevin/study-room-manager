@@ -105,6 +105,15 @@ button{
   <button onclick="shuffleStudents()">이름섞기</button>
   <button onclick="clearSelection()">선택해제</button>
 </div>
+<div class="top-controls">
+  <button onclick="clearAllStudents()">전체삭제</button>
+</div>
+
+<div class="top-controls">
+  <input id="broadcastInput" placeholder="전체 메시지 입력">
+  <button onclick="sendBroadcastMessage()">전체메시지 보내기</button>
+  <button onclick="clearBroadcastMessage()">전체메시지 해제</button>
+</div>
 
 <div id="students" class="circle"></div>
 
@@ -116,6 +125,7 @@ const socket = io();
 
 let students = [];
 let currentIndex = null;
+let broadcastMessage = "";
 
 let inactivityTimer = null;
 let blinkEndTimer = null;
@@ -123,6 +133,7 @@ let blinkEndTimer = null;
 socket.on("update", (data) => {
   students = data.students || [];
   currentIndex = data.currentIndex ?? null;
+  broadcastMessage = data.broadcastMessage || "";
   render();
 });
 
@@ -168,7 +179,24 @@ function deleteStudent(index){
   socket.emit("deleteStudent", index);
   onUserAction(false);
 }
+function clearAllStudents(){
+  socket.emit("clearAllStudents");
+  onUserAction(false);
+}
 
+function sendBroadcastMessage(){
+  const input = document.getElementById("broadcastInput").value.trim();
+  if(!input) return;
+
+  socket.emit("setBroadcastMessage", input);
+  document.getElementById("broadcastInput").value = "";
+  onUserAction(false);
+}
+
+function clearBroadcastMessage(){
+  socket.emit("clearBroadcastMessage");
+  onUserAction(false);
+}
 function onUserAction(shouldBlinkNow){
   resetInactivityBlinkTimer();
 
